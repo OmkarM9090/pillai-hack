@@ -31,7 +31,7 @@ export function DemandForecast() {
         }
       />
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Kpi label="Tonight" sev="warn" icon={<BedDouble className="size-4" />}
           value={<AnimatedNumber value={95} format={v => Math.round(v) + '%'} className="text-[26px] font-bold text-slate-900" />}
           sub="190 / 200 rooms" delta={<Delta value="+25 pts" invert />} />
@@ -71,8 +71,8 @@ export function DemandForecast() {
 
           <div className="surface p-4">
             <SectionHead title="Daily detail" className="mb-3" />
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <table className="w-full text-[12.5px]">
+            <div className="rounded-lg border border-slate-200 overflow-x-auto">
+              <table className="w-full text-[12.5px] min-w-[500px]">
                 <thead>
                   <tr className="bg-slate-50">
                     {['Date', 'Occupancy', 'ADR', 'RevPAR', 'Demand driver'].map((h, i) => (

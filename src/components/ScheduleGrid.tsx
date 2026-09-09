@@ -45,7 +45,8 @@ export function ScheduleGrid({ after, className }: { after: boolean; className?:
   }));
 
   return (
-    <div className={cn('rounded-lg border border-edge overflow-hidden', className)}>
+    <div className={cn('rounded-lg border border-edge overflow-x-auto', className)}>
+      <div className="min-w-[700px]">
       {/* Time header */}
       <div className="grid bg-card2/80 border-b border-edge" style={{ gridTemplateColumns: '170px 1fr' }}>
         <div className="px-3 py-2 text-[9.5px] font-bold uppercase tracking-wider text-faint">Employee</div>
@@ -126,6 +127,7 @@ export function ScheduleGrid({ after, className }: { after: boolean; className?:
           )}
         </div>
       ))}
+      </div>
     </div>
   );
 }

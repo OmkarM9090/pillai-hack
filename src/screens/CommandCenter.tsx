@@ -61,7 +61,7 @@ export function CommandCenter() {
         }
       />
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Kpi
           label="Room Occupancy" sev="warn" icon={<BedDouble className="size-4" />}
           onClick={() => navigate('sandbox')}

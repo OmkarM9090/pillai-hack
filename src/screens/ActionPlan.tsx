@@ -127,7 +127,7 @@ function ActionCard({ action, index }: { action: ActionItem; index: number }) {
         <p className="text-[12px] text-slate-800 leading-relaxed">{action.why}</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 mt-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
         {[
           { icon: Target, l: 'Impact', v: action.impact, c: 'text-emerald-600' },
           { icon: CircleDollarSign, l: 'Cost', v: action.cost, c: 'text-slate-900' },
@@ -152,7 +152,7 @@ function ActionCard({ action, index }: { action: ActionItem; index: number }) {
         </div>
       )}
 
-      <div className="mt-3.5 flex items-center gap-2">
+      <div className="mt-3.5 flex flex-wrap items-center gap-2">
         {done ? (
           <div className="flex-1 flex items-center gap-2 text-[11.5px] text-emerald-600">
             <BadgeCheck className="size-4" />

@@ -72,8 +72,8 @@ export function Sandbox() {
 
       <div className="grid grid-cols-12 gap-4">
         {/* ── LEFT · Scenario controls ─────────────────────── */}
-        <div className="col-span-12 lg:col-span-3 space-y-4">
-          <div className="surface p-4 space-y-5">
+        <div className="col-span-12 lg:col-span-3 space-y-4 max-md:contents">
+          <div className="surface p-4 space-y-5 max-md:col-span-12 max-md:order-1">
             <div className="flex items-center justify-between">
               <p className="text-[10.5px] font-bold tracking-[0.14em] text-faint uppercase">Scenario controls</p>
               {dirty && !loading && <Badge sev="warn" pulse>Unapplied</Badge>}
@@ -153,7 +153,7 @@ export function Sandbox() {
             </div>
           </div>
 
-          <div className="surface-flat p-3.5 text-[10.5px] text-slate-600 leading-relaxed shadow-sm">
+          <div className="surface-flat p-3.5 text-[10.5px] text-slate-600 leading-relaxed shadow-sm max-md:col-span-12 max-md:order-2">
             <p className="font-bold text-slate-500 uppercase tracking-wider text-[9.5px] mb-1">Counterfactual engine</p>
             Cascades demand through staffing, housekeeping, F&B and inventory models calibrated on 18 months of property history.
             <span className="block mt-1 font-mono text-[10px] text-slate-400">Latency 1.2 s · seed 8842 · v2.4.1</span>
@@ -161,8 +161,8 @@ export function Sandbox() {
         </div>
 
         {/* ── CENTER · Operational ripple ──────────────────── */}
-        <div className="col-span-12 lg:col-span-5 space-y-4">
-          <div className="surface p-4 relative overflow-hidden shadow-sm">
+        <div className="col-span-12 lg:col-span-5 space-y-4 max-md:contents">
+          <div className="surface p-4 relative overflow-hidden shadow-sm max-md:col-span-12 max-md:order-3">
             {loading && (
               <div className="absolute top-0 left-0 right-0 h-[3px] overflow-hidden bg-slate-200/50 z-10">
                 <div className="h-full w-1/3 bg-sky-500 animate-scan" />
@@ -176,15 +176,15 @@ export function Sandbox() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className={cn('rounded-lg border border-slate-200 p-3 space-y-2.5', i === 4 && 'col-span-2')}>
+                  <div key={i} className={cn('rounded-lg border border-slate-200 p-3 space-y-2.5', i === 4 && 'sm:col-span-2')}>
                     <div className="skeleton h-2.5 w-1/2" /><div className="skeleton h-6 w-2/3" /><div className="skeleton h-2 w-full" />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5" key={rippleKey}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" key={rippleKey}>
                 <Metric icon={<Flame className="size-3.5" />} label="Staff burnout" sev={sevOf(result.burnout, 55, 70)}
                   value={<AnimatedNumber value={result.burnout} format={v => Math.round(v) + '%'} />}
                   delta={dt(`+${result.burnout - baseResult.burnout} pts`, true)}
@@ -201,7 +201,7 @@ export function Sandbox() {
                   value={<AnimatedNumber value={result.roomRevenue} format={fmtMoney} />}
                   delta={dt(`+${((result.roomRevenue / baseResult.roomRevenue - 1) * 100).toFixed(1)}%`)}
                   gauge={<BarGauge value={result.roomRevenue} max={54000} thresholds={[99999, 99999]} showNeedle={false} />} d={3} />
-                <Metric className="col-span-2" icon={<Sparkles className="size-3.5" />} label="GOPPAR" sev="ok"
+                <Metric className="sm:col-span-2" icon={<Sparkles className="size-3.5" />} label="GOPPAR" sev="ok"
                   value={<AnimatedNumber value={result.goppar} format={fmtMoney} />}
                   delta={dt(`+${Math.round((result.goppar / baseResult.goppar - 1) * 100)}%`)}
                   gauge={<BarGauge value={result.goppar} max={46000} thresholds={[99999, 99999]} showNeedle={false} />} d={4} />
@@ -210,7 +210,7 @@ export function Sandbox() {
           </div>
 
           {/* Ripple flow */}
-          <div className="surface p-4">
+          <div className="surface p-4 max-md:col-span-12 max-md:order-5">
             <div className="flex items-center justify-between mb-3">
               <SectionHead title="Ripple effect" sub="Demand cascade across operations" />
               <span className="text-[10px] font-mono text-faint">T+0 → T+9 hrs</span>
@@ -245,8 +245,8 @@ export function Sandbox() {
         </div>
 
         {/* ── RIGHT · Business impact ──────────────────────── */}
-        <div className="col-span-12 lg:col-span-4 space-y-4">
-          <div className="surface p-4">
+        <div className="col-span-12 lg:col-span-4 space-y-4 max-md:contents">
+          <div className="surface p-4 max-md:col-span-12 max-md:order-4">
             <SectionHead title="Business impact" sub="Baseline vs scenario" className="mb-3" />
             {loading ? (
               <div className="space-y-3"><div className="skeleton h-10 w-2/3" /><div className="skeleton h-3 w-full" /><div className="skeleton h-3 w-full" /><div className="skeleton h-24 w-full" /></div>
@@ -273,7 +273,7 @@ export function Sandbox() {
             )}
           </div>
 
-          <div className="surface p-4">
+          <div className="surface p-4 max-md:col-span-12 max-md:order-7">
             <SectionHead title="Simulation insight" className="mb-2.5" />
             <div className="rounded-lg border border-sky-500/25 bg-sky-500/[0.06] p-3 flex gap-2.5">
               <Sparkles className="size-4 text-sky-500 shrink-0 mt-0.5" />
@@ -303,8 +303,8 @@ export function Sandbox() {
         </div>
 
         {/* ── BOTTOM LEFT · Comparison table ──────────────── */}
-        <div className="col-span-12 xl:col-span-7">
-          <div className="surface p-4 h-full">
+        <div className="col-span-12 xl:col-span-7 max-md:contents">
+          <div className="surface p-4 h-full max-md:col-span-12 max-md:order-6">
             <div className="flex items-center justify-between mb-3">
               <SectionHead title="Baseline vs simulation" sub="Every metric recomputed from scenario inputs" />
               <div className="flex gap-2">
@@ -312,8 +312,8 @@ export function Sandbox() {
                 <Badge sev={result.risk === 'HIGH' ? 'crit' : 'info'}>Simulation {Math.round(result.occupancy * 100)}%</Badge>
               </div>
             </div>
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <table className="w-full text-[12.5px]">
+            <div className="rounded-lg border border-slate-200 overflow-x-auto">
+              <table className="w-full text-[12.5px] min-w-[500px]">
                 <thead>
                   <tr className="bg-slate-50 text-left">
                     {['Metric', `Baseline ${Math.round(baseResult.occupancy * 100)}%`, `Simulation ${Math.round(result.occupancy * 100)}%`, 'Impact'].map((h, i) => (
@@ -344,8 +344,8 @@ export function Sandbox() {
         </div>
 
         {/* ── BOTTOM RIGHT · AI prescriptive plan ─────────── */}
-        <div className="col-span-12 xl:col-span-5">
-          <div className={cn('surface p-4 h-full border', allQueued ? 'border-emerald-500/25' : 'border-emerald-500/20')}>
+        <div className="col-span-12 xl:col-span-5 max-md:contents">
+          <div className={cn('surface p-4 h-full border max-md:col-span-12 max-md:order-8', allQueued ? 'border-emerald-500/25' : 'border-emerald-500/20')}>
             <div className="flex items-center justify-between mb-1">
               <SectionHead title="AI recommendation" />
               <Badge sev="ok" pulse={!allQueued}>Prescriptive</Badge>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, ChevronDown, MapPin, Search, Sparkles } from 'lucide-react';
+import { Bell, ChevronDown, MapPin, Search, Sparkles, Menu } from 'lucide-react';
 import { useApp } from '@/store/app';
 import { DATE_STR } from '@/data/model';
 import { Avatar, Btn } from './ui';
@@ -14,13 +14,17 @@ function useClock() {
 }
 
 export function TopBar() {
-  const { setAssistantOpen, assistantOpen, pendingCount, navigate } = useApp();
+  const { setAssistantOpen, assistantOpen, pendingCount, navigate, setMobileMenuOpen } = useApp();
   const t = useClock();
   let h = t.getHours(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
   const clock = `${String(h).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')} ${ap}`;
 
   return (
     <header className="h-16 shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur flex items-center gap-3 px-5 sticky top-0 z-30">
+      <button className="md:hidden flex shrink-0 items-center justify-center size-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setMobileMenuOpen(true)}>
+        <Menu className="size-4" />
+      </button>
+
       <button className="flex items-center gap-2 h-9 pl-2.5 pr-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 transition-colors">
         <MapPin className="size-3.5 text-emerald-500" />
         <span className="text-[13px] font-semibold text-slate-900">Azure Bay Resort</span>

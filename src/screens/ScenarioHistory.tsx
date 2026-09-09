@@ -60,8 +60,8 @@ export function ScenarioHistory() {
         </div>
       )}
 
-      <div className="surface overflow-hidden shadow-sm">
-        <table className="w-full text-[12.5px]">
+      <div className="surface overflow-x-auto shadow-sm">
+        <table className="w-full text-[12.5px] min-w-[700px]">
           <thead>
             <tr className="bg-slate-50">
               {['Run', 'Scenario', 'Parameters', 'Δ GOPPAR', 'Risk', 'Decision', 'Owner'].map((h, i) => (

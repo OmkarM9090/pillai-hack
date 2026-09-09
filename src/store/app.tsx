@@ -52,6 +52,11 @@ interface AppState {
   resolveReview: (id: string) => void;
 
   now: Date;
+
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (v: boolean | ((p: boolean) => boolean)) => void;
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (v: boolean | ((p: boolean) => boolean)) => void;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -75,12 +80,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [alertState, setAlertState] = useState<'open' | 'approved' | 'dismissed'>('open');
   const [resolvedReviews, setResolvedReviews] = useState<Set<string>>(new Set());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const toastId = useRef(0);
   const timers = useRef<number[]>([]);
 
   const now = useMemo(() => BOOT, []);
 
-  const navigate = useCallback((s: ScreenId) => setScreen(s), []);
+  const navigate = useCallback((s: ScreenId) => {
+    setScreen(s);
+    setMobileMenuOpen(false); // Auto-close mobile menu on navigation
+  }, []);
 
   const pushToast = useCallback((kind: ToastKind, title: string, msg?: string) => {
     const id = ++toastId.current;
@@ -223,6 +233,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     alertState, setAlertState,
     resolvedReviews, resolveReview,
     now,
+    sidebarCollapsed, setSidebarCollapsed,
+    mobileMenuOpen, setMobileMenuOpen,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -178,7 +178,8 @@ export function TaskBoard() {
       </div>
 
       {/* Kanban */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+      <div className="overflow-x-auto pb-4 -mx-6 px-6 xl:mx-0 xl:px-0 xl:pb-0 mb-4 xl:mb-8">
+        <div className="grid grid-cols-4 gap-4 min-w-[1000px] xl:min-w-0">
         {TASK_COLS.map(col => {
           const colTasks = visible.filter(t => t.status === col.id);
           return (
@@ -196,6 +197,7 @@ export function TaskBoard() {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Prediction accuracy */}

@@ -40,7 +40,7 @@ export function FeedbackAccuracy() {
         }
       />
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Kpi label="Forecast accuracy" sev="ok" icon={<Target className="size-4" />}
           value={<AnimatedNumber value={88.7} format={v => v.toFixed(1) + '%'} className="text-[26px] font-bold text-slate-900" />}
           sub="7-day rolling · weighted" />
@@ -58,7 +58,7 @@ export function FeedbackAccuracy() {
       {/* Learning loop */}
       <div className="surface p-4 mb-6 shadow-sm">
         <SectionHead title="Closed learning loop" sub="Every approved decision is measured against its prediction" className="mb-4" />
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {loop.map((s, i) => (
             <div key={i} className={cn('relative rounded-lg border p-3.5',
               s.state === 'done' ? 'border-emerald-200 bg-emerald-50 shadow-sm' : 'border-sky-200 bg-sky-50 shadow-sm')}>
@@ -98,8 +98,8 @@ export function FeedbackAccuracy() {
 
           <div className="surface p-4 shadow-sm">
             <SectionHead title="Error by metric" sub="Predicted vs actual · last completed cycle" className="mb-3" />
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <table className="w-full text-[12.5px]">
+            <div className="rounded-lg border border-slate-200 overflow-x-auto">
+              <table className="w-full text-[12.5px] min-w-[500px]">
                 <thead>
                   <tr className="bg-slate-50">
                     {['Metric', 'Predicted', 'Actual', 'Error', '7-day error trend'].map((h, i) => (
