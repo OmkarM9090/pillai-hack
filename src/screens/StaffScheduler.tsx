@@ -3,7 +3,7 @@ import { BadgeCheck, CalendarDays, CircleAlert, Clock3, Cpu, Download, Filter, S
 import { cn } from '@/utils/cn';
 import { useApp } from '@/store/app';
 import { Badge, Btn, Progress, ScreenHeader, SectionHead, Tag } from '@/components/ui';
-import { ScheduleGrid, ScheduleLegend, STAFF } from '@/components/ScheduleGrid';
+import { ScheduleGrid, ScheduleLegend } from '@/components/ScheduleGrid';
 
 const WEEK = [
   { d: 'Mon 7', occ: 88 }, { d: 'Tue 8', occ: 95, today: true }, { d: 'Wed 9', occ: 92 }, { d: 'Thu 10', occ: 86 },
@@ -19,10 +19,30 @@ const COVERAGE = [
 ];
 
 export function StaffScheduler() {
-  const { actions, navigate, pushToast } = useApp();
+  const { staff, fetchStaff, activeRole, actions, navigate, pushToast } = useApp();
   const optimized = ['approved', 'queued'].includes(actions.find(a => a.id === 'ACT-2048')?.status ?? '');
   const [view, setView] = useState<'before' | 'after'>(optimized ? 'after' : 'before');
+  const [optimizing, setOptimizing] = useState(false);
   const after = view === 'after';
+
+  const handleOptimize = async () => {
+    setOptimizing(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': activeRole }
+      });
+      if (res.ok) {
+        await fetchStaff();
+        setView('after');
+        pushToast('success', 'Roster optimized', 'OR-Tools successfully reallocated cross-trained staff.');
+      }
+    } catch (e) {
+      pushToast('error', 'Optimization failed', 'ML Core unreachable.');
+    } finally {
+      setOptimizing(false);
+    }
+  };
 
   return (
     <div className="p-6 max-w-[1560px] mx-auto">
@@ -41,7 +61,9 @@ export function StaffScheduler() {
               ))}
             </div>
             <Btn variant="outline" size="sm" onClick={() => pushToast('info', 'Export started', 'Roster PDF will arrive in your inbox.')}><Download className="size-3.5" /> Export</Btn>
-            <Btn variant="primary" size="sm" onClick={() => navigate('actions')}><Sparkles className="size-3.5" /> AI optimize</Btn>
+            <Btn variant="primary" size="sm" onClick={handleOptimize} disabled={optimizing}>
+              <Sparkles className="size-3.5" /> {optimizing ? 'Optimizing...' : 'AI optimize'}
+            </Btn>
           </>
         }
       />
@@ -62,10 +84,10 @@ export function StaffScheduler() {
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 xl:col-span-8 space-y-3">
           <div className="flex items-center justify-between">
-            <SectionHead title="Shift board — Tuesday, Sep 8" sub={`${STAFF.length} employees rostered · XT = cross-trained certified`} />
+            <SectionHead title="Shift board — Tuesday, Sep 8" sub={`${staff.length} employees rostered · XT = cross-trained certified`} />
             <Tag><Filter className="size-3 mr-1.5" /> All departments</Tag>
           </div>
-          <ScheduleGrid after={after} />
+          <ScheduleGrid staff={staff} after={after} />
           <ScheduleLegend />
           <ScheduleLegend />
           <div className="surface-flat p-3 flex items-center gap-3 text-[11px] text-slate-600">

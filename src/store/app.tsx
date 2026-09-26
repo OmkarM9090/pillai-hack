@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect, type ReactNode } from 'react';
 import {
-  ACTION_TASKS, BASE_PARAMS, computeScenario, INITIAL_ACTIONS, INITIAL_TASKS,
-  type ActionItem, type ScenarioParams, type ScreenId, type SimResult, type Task, type TaskStatus,
+  ACTION_TASKS, BASE_PARAMS, BASE_RESULT,
+  type ActionItem, type ScenarioParams, type ScreenId, type SimResult, type Task, type TaskStatus, type Review
 } from '@/data/model';
 
 export type ToastKind = 'success' | 'info' | 'warn' | 'error';
@@ -34,7 +34,6 @@ interface AppState {
 
   tasks: Task[];
   moveTask: (id: string, s: TaskStatus) => void;
-  addTask: (t: Task) => void;
   hasTask: (id: string) => boolean;
   openTaskIds: number;
 
@@ -57,6 +56,19 @@ interface AppState {
   setSidebarCollapsed: (v: boolean | ((p: boolean) => boolean)) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (v: boolean | ((p: boolean) => boolean)) => void;
+
+  activeRole: string;
+  setActiveRole: (role: string) => void;
+  activeUserName: string;
+
+  reviews: Review[];
+  fetchReviews: () => Promise<void>;
+
+  staff: any[];
+  fetchStaff: () => Promise<void>;
+
+  fetchTasks: () => Promise<void>;
+  fetchActions: () => Promise<void>;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -68,7 +80,18 @@ const stamp = (d: Date) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ap}`;
 };
 
+export const ROLES = [
+  { id: 'gm', name: 'General Manager', user: 'Sarah Morgan' },
+  { id: 'ops', name: 'Operations Manager', user: 'David Chen' },
+  { id: 'hk', name: 'Housekeeping Manager', user: 'Maria Garcia' },
+  { id: 'fb', name: 'F&B Manager', user: 'Chef Gordon' },
+  { id: 'eng', name: 'Engineering Manager', user: 'John Smith' },
+  { id: 'staff', name: 'Staff', user: 'Alex' },
+  { id: 'guest', name: 'Guest', user: 'Guest User' }
+];
+
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [activeRole, setActiveRole] = useState<string>('gm');
   const [screen, setScreen] = useState<ScreenId>('overview');
   const [draft, setDraftState] = useState<ScenarioParams>(BASE_PARAMS);
   const [applied, setApplied] = useState<ScenarioParams>(BASE_PARAMS);
@@ -76,8 +99,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [baseResult] = useState<SimResult>(BASE_RESULT);
   const [phase, setPhase] = useState<SimPhase>('idle');
   const [lastRun, setLastRun] = useState<string | null>(null);
-  const [actions, setActions] = useState<ActionItem[]>(INITIAL_ACTIONS);
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [actions, setActions] = useState<ActionItem[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [alertState, setAlertState] = useState<'open' | 'approved' | 'dismissed'>('open');
@@ -88,6 +111,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const timers = useRef<number[]>([]);
 
   const now = useMemo(() => BOOT, []);
+
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/reviews', { headers: { 'x-user-role': activeRole } });
+      if (res.ok) setReviews(await res.json());
+    } catch (e) { console.error('Failed to fetch reviews', e); }
+  }, [activeRole]);
+
+  const fetchStaff = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/staff', { headers: { 'x-user-role': activeRole } });
+      if (res.ok) setStaff(await res.json());
+    } catch (e) { console.error('Failed to fetch staff', e); }
+  }, [activeRole]);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/tasks', { headers: { 'x-user-role': activeRole } });
+      if (res.ok) setTasks(await res.json());
+    } catch (e) { console.error('Failed to fetch tasks', e); }
+  }, [activeRole]);
+
+  const fetchActions = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/plans', { headers: { 'x-user-role': activeRole } });
+      if (res.ok) setActions(await res.json());
+    } catch (e) { console.error('Failed to fetch actions', e); }
+  }, [activeRole]);
+
+  // Fetch initial data from backend
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchTasks();
+        await fetchActions();
+        await fetchReviews();
+        await fetchStaff();
+      } catch (err) {
+        console.error("Failed to fetch initial data", err);
+      }
+    };
+    loadData();
+  }, [fetchTasks, fetchActions, fetchReviews, fetchStaff]);
 
   const navigate = useCallback((s: ScreenId) => {
     setScreen(s);
@@ -114,12 +183,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const latestDraft = useRef(draft);
   latestDraft.current = draft;
 
+  const latestRole = useRef(activeRole);
+  latestRole.current = activeRole;
+
   const runSimulation = useCallback(async () => {
     setPhase('running');
     try {
       const response = await fetch('http://localhost:5000/api/simulate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-role': latestRole.current
+        },
         body: JSON.stringify({
           occupancy: latestDraft.current.occupancy,
           weather: latestDraft.current.weather,
@@ -165,76 +240,162 @@ export function AppProvider({ children }: { children: ReactNode }) {
     navigate('sandbox');
   }, [navigate]);
 
-  const spawnTask = useCallback((actionId: string) => {
+  const spawnTask = useCallback(async (actionId: string) => {
     const t = ACTION_TASKS[actionId];
     if (!t) return;
-    setTasks(prev => (prev.some(x => x.id === t.id) ? prev : [t, ...prev]));
-  }, []);
-
-  const approveAction = useCallback((id: string) => {
-    setActions(prev => {
-      const a = prev.find(x => x.id === id);
-      if (!a || a.status !== 'pending') return prev;
-      pushToast('success', 'Action approved', a.approveMsg + ' — Sarah Morgan.');
-      later(1400, () => {
-        setActions(p2 => p2.map(x => (x.id === id && x.status === 'approved' ? { ...x, status: 'queued' } : x)));
-        spawnTask(id);
-        pushToast('info', 'Execution queued', a.queuedMsg);
+    try {
+      await fetch('http://localhost:5000/api/tasks/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': latestRole.current },
+        body: JSON.stringify(t)
       });
-      return prev.map(x => (x.id === id
-        ? { ...x, status: 'approved', approvedBy: 'Sarah Morgan', approvedAt: stamp(new Date(BOOT.getTime() + 5 * 60000)) }
-        : x));
-    });
+      await fetchTasks();
+    } catch (e) {
+      console.error('Failed to spawn task', e);
+    }
+  }, [fetchTasks]);
+
+  const approveAction = useCallback(async (id: string) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/approve-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': latestRole.current
+        },
+        body: JSON.stringify({ db_plan_id: id, decision: 'approved' })
+      });
+      if (!response.ok) throw new Error('API Error');
+      
+      setActions(prev => {
+        const a = prev.find(x => x.id === id);
+        if (!a || a.status !== 'pending') return prev;
+        pushToast('success', 'Action approved via API', a.approveMsg + ' — Sarah Morgan.');
+        later(1400, () => {
+          setActions(p2 => p2.map(x => (x.id === id && x.status === 'approved' ? { ...x, status: 'queued' } : x)));
+          spawnTask(id);
+          pushToast('info', 'Execution queued', a.queuedMsg);
+        });
+        return prev.map(x => (x.id === id
+          ? { ...x, status: 'approved', approvedBy: 'Sarah Morgan', approvedAt: stamp(new Date(BOOT.getTime() + 5 * 60000)) }
+          : x));
+      });
+    } catch (e) {
+      console.error(e);
+      pushToast('error', 'API Error', 'Failed to approve action via backend.');
+    }
   }, [later, pushToast, spawnTask]);
 
-  const modifyAndApprove = useCallback((id: string, note: string) => {
-    setActions(prev => {
-      const a = prev.find(x => x.id === id);
-      if (!a || a.status === 'rejected' || a.status === 'queued' || a.status === 'approved') return prev;
-      pushToast('success', 'Approved with modifications', `${id} · ${note} — Sarah Morgan.`);
-      later(1400, () => {
-        setActions(p2 => p2.map(x => (x.id === id && x.status === 'approved' ? { ...x, status: 'queued' } : x)));
-        spawnTask(id);
-        if (ACTION_TASKS[id]) pushToast('info', 'Execution queued', a.queuedMsg);
+  const modifyAndApprove = useCallback(async (id: string, note: string) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/approve-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': latestRole.current },
+        body: JSON.stringify({ db_plan_id: id, decision: 'approved', note })
       });
-      return prev.map(x => (x.id === id ? {
-        ...x, status: 'approved', approvedBy: 'Sarah Morgan', approvedAt: stamp(new Date(BOOT.getTime() + 6 * 60000)),
-        detail: [{ label: 'Modification', value: note }, ...(x.detail ?? [])],
-      } : x));
-    });
+      if (!response.ok) throw new Error('API Error');
+
+      setActions(prev => {
+        const a = prev.find(x => x.id === id);
+        if (!a || a.status === 'rejected' || a.status === 'queued' || a.status === 'approved') return prev;
+        pushToast('success', 'Approved with modifications', `${id} · ${note} — Sarah Morgan.`);
+        later(1400, () => {
+          setActions(p2 => p2.map(x => (x.id === id && x.status === 'approved' ? { ...x, status: 'queued' } : x)));
+          spawnTask(id);
+          if (ACTION_TASKS[id]) pushToast('info', 'Execution queued', a.queuedMsg);
+        });
+        return prev.map(x => (x.id === id ? {
+          ...x, status: 'approved', approvedBy: 'Sarah Morgan', approvedAt: stamp(new Date(BOOT.getTime() + 6 * 60000)),
+          detail: [{ label: 'Modification', value: note }, ...(x.detail ?? [])],
+        } : x));
+      });
+    } catch (e) {
+      console.error(e);
+      pushToast('error', 'API Error', 'Failed to approve action with modification via backend.');
+    }
   }, [later, pushToast, spawnTask]);
 
-  const rejectAction = useCallback((id: string) => {
-    setActions(prev => prev.map(x => (x.id === id && (x.status === 'pending' || x.status === 'manual') ? { ...x, status: 'rejected' } : x)));
-    pushToast('warn', 'Action rejected', id + ' logged to decision audit.');
+  const rejectAction = useCallback(async (id: string) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/approve-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': latestRole.current },
+        body: JSON.stringify({ db_plan_id: id, decision: 'rejected' })
+      });
+      if (!response.ok) throw new Error('API Error');
+      setActions(prev => prev.map(x => (x.id === id && (x.status === 'pending' || x.status === 'manual') ? { ...x, status: 'rejected' } : x)));
+      pushToast('warn', 'Action rejected', id + ' logged to decision audit.');
+    } catch (e) {
+      console.error(e);
+      pushToast('error', 'API Error', 'Failed to reject action via backend.');
+    }
   }, [pushToast]);
 
-  const restoreAction = useCallback((id: string) => {
-    setActions(prev => prev.map(x => (x.id === id && x.status === 'rejected' ? { ...x, status: 'pending' } : x)));
-    pushToast('info', 'Action restored', id + ' returned to the approval queue.');
+  const restoreAction = useCallback(async (id: string) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/approve-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': latestRole.current },
+        body: JSON.stringify({ db_plan_id: id, decision: 'pending' })
+      });
+      if (!response.ok) throw new Error('API Error');
+      setActions(prev => prev.map(x => (x.id === id && x.status === 'rejected' ? { ...x, status: 'pending' } : x)));
+      pushToast('info', 'Action restored', id + ' returned to the approval queue.');
+    } catch (e) {
+      console.error(e);
+      pushToast('error', 'API Error', 'Failed to restore action via backend.');
+    }
   }, [pushToast]);
 
-  const approveAll = useCallback(() => {
+  const approveAll = useCallback(async () => {
     const ids = ['ACT-2048', 'ACT-2049', 'ACT-2050'];
-    setActions(prev => prev.map(x => (ids.includes(x.id) && x.status === 'pending'
-      ? { ...x, status: 'approved', approvedBy: 'Sarah Morgan', approvedAt: stamp(new Date(BOOT.getTime() + 4 * 60000)) }
-      : x)));
     setAlertState('approved');
-    pushToast('success', 'All 3 actions approved', 'Approved by Sarah Morgan · execution queued.');
-    later(1500, () => {
-      setActions(prev => prev.map(x => (ids.includes(x.id) && x.status === 'approved' ? { ...x, status: 'queued' } : x)));
-      ids.forEach(spawnTask);
-      pushToast('info', '3 tasks created', 'OPS-105 · FNB-034 · REV-012 assigned to department queues.');
-    });
+    pushToast('info', 'Approving...', 'Sending requests to backend API.');
+    
+    let successCount = 0;
+    for (const id of ids) {
+      try {
+        const response = await fetch('http://localhost:5000/api/approve-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-role': latestRole.current },
+          body: JSON.stringify({ db_plan_id: id, decision: 'approved' })
+        });
+        if (response.ok) {
+          successCount++;
+          setActions(prev => prev.map(x => (x.id === id ? { ...x, status: 'approved', approvedBy: 'Sarah Morgan', approvedAt: stamp(new Date()) } : x)));
+        }
+      } catch (err) {
+        console.error("Failed to approve", id, err);
+      }
+    }
+    
+    if (successCount === ids.length) {
+      pushToast('success', 'All 3 actions approved', 'Approved by Sarah Morgan · execution queued.');
+      later(1500, () => {
+        setActions(prev => prev.map(x => (ids.includes(x.id) && x.status === 'approved' ? { ...x, status: 'queued' } : x)));
+        ids.forEach(spawnTask);
+        pushToast('info', '3 tasks created', 'OPS-105 · FNB-034 · REV-012 assigned to department queues.');
+      });
+    } else {
+      pushToast('warn', 'Partial Approval', `Only ${successCount}/3 actions were approved successfully.`);
+    }
   }, [later, pushToast, spawnTask]);
 
-  const moveTask = useCallback((id: string, s: TaskStatus) => {
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, status: s } : t)));
-  }, []);
-
-  const addTask = useCallback((t: Task) => {
-    setTasks(prev => (prev.some(x => x.id === t.id) ? prev : [t, ...prev]));
-  }, []);
+  const moveTask = useCallback(async (id: string, s: TaskStatus) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': latestRole.current },
+        body: JSON.stringify({ task_id: id, status: s })
+      });
+      if (response.ok) {
+        setTasks(prev => prev.map(t => (t.id === id ? { ...t, status: s } : t)));
+      }
+    } catch (err) {
+      console.error("Failed to move task", err);
+      pushToast('error', 'API Error', 'Failed to update task status in backend.');
+    }
+  }, [pushToast]);
 
   const hasTask = useCallback((id: string) => tasks.some(t => t.id === id), [tasks]);
 
@@ -249,12 +410,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const pendingCount = actions.filter(a => a.status === 'pending').length;
   const openTaskIds = tasks.filter(t => t.status !== 'done').length;
 
+  const activeUserName = useMemo(() => ROLES.find(r => r.id === activeRole)?.user || 'Unknown', [activeRole]);
+
   const value: AppState = {
     screen, navigate,
     draft, setDraft, applied, result, baseResult, dirty, phase, lastRun,
     runSimulation, resetBaseline, presetSurge,
     actions, approveAction, modifyAndApprove, rejectAction, restoreAction, approveAll, pendingCount,
-    tasks, moveTask, addTask, hasTask, openTaskIds,
+    tasks, moveTask, hasTask, openTaskIds,
     toasts, pushToast, dismissToast,
     assistantOpen, setAssistantOpen,
     alertState, setAlertState,
@@ -262,6 +425,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     now,
     sidebarCollapsed, setSidebarCollapsed,
     mobileMenuOpen, setMobileMenuOpen,
+    activeRole, setActiveRole, activeUserName,
+    reviews, fetchReviews,
+    staff, fetchStaff,
+    fetchTasks, fetchActions,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

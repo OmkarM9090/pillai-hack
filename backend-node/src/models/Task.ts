@@ -1,14 +1,18 @@
 import mongoose from 'mongoose';
 
 const TaskSchema = new mongoose.Schema({
+  id: { type: String, required: true },
   title: { type: String, required: true },
-  description: { type: String },
-  department: { type: String },
+  dept: { type: String },
   priority: { type: String, enum: ['Low', 'Medium', 'High', 'Critical'], default: 'Medium' },
-  status: { type: String, enum: ['Open', 'In Progress', 'Completed', 'Verified'], default: 'Open' },
-  assignedTo: { type: String },
-  source: { type: String }, // e.g., 'Guest Review', 'AI Prediction'
-  createdAt: { type: Date, default: Date.now },
+  source: { type: String },
+  assignee: { type: String },
+  location: { type: String },
+  createdAt: { type: String }, // Storing as String to match frontend formatting (e.g., '09:21 AM')
+  status: { type: String, enum: ['todo', 'progress', 'verify', 'done'], default: 'todo' },
+  origin: { type: String },
+  prediction: { type: String },
+  action: { type: String },
   updatedAt: { type: Date, default: Date.now }
 });
 

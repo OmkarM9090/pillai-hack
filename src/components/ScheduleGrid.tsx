@@ -14,34 +14,11 @@ export const DEPT_STYLE: Record<Dept, { bg: string; border: string; text: string
 export const TIMES = ['08 AM', '10 AM', '12 PM', '02 PM', '04 PM', '06 PM', '08 PM', '10 PM'];
 
 export interface Block { start: number; span: number; dept: Dept; kind?: 'reassigned'; label?: string }
-export interface Emp { name: string; role: string; dept: Dept; blocks: Block[]; after?: Block[] }
+export interface Emp { name: string; role: string; dept: Dept; blocks: Block[]; afterBlocks?: Block[] }
 
-export const STAFF: Emp[] = [
-  { name: 'Dana Whitfield', role: 'HK Supervisor', dept: 'Housekeeping', blocks: [{ start: 0, span: 4, dept: 'Housekeeping' }] },
-  { name: 'Rosa Diaz', role: 'Room Attendant', dept: 'Housekeeping', blocks: [{ start: 0, span: 4, dept: 'Housekeeping' }] },
-  { name: 'Luis Vega', role: 'Room Attendant', dept: 'Housekeeping', blocks: [{ start: 2, span: 5, dept: 'Housekeeping' }] },
-  { name: 'Mia Chen', role: 'Turndown Lead', dept: 'Housekeeping', blocks: [{ start: 1, span: 4, dept: 'Housekeeping' }] },
-  { name: 'Priya Nair', role: 'Guest Services', dept: 'Front Desk', blocks: [{ start: 0, span: 4, dept: 'Front Desk' }] },
-  { name: 'Tom Becker', role: 'Night FD Agent', dept: 'Front Desk', blocks: [{ start: 3, span: 5, dept: 'Front Desk' }] },
-  { name: 'Alex Carter', role: 'F&B Lead', dept: 'F&B', blocks: [{ start: 1, span: 4, dept: 'F&B' }] },
-  { name: 'Marco Ruiz', role: 'Sous Chef', dept: 'F&B', blocks: [{ start: 4, span: 4, dept: 'F&B' }] },
-  {
-    name: 'Nina Rossi', role: 'Spa Therapist · XT', dept: 'Spa', blocks: [{ start: 1, span: 4, dept: 'Spa' }],
-    after: [{ start: 1, span: 2, dept: 'Spa' }, { start: 3, span: 4, dept: 'Front Desk', kind: 'reassigned', label: 'XT → FD' }],
-  },
-  {
-    name: 'Sara Kim', role: 'Spa Therapist · XT', dept: 'Spa', blocks: [{ start: 0, span: 4, dept: 'Spa' }],
-    after: [{ start: 0, span: 3, dept: 'Spa' }, { start: 3, span: 4, dept: 'F&B', kind: 'reassigned', label: 'XT → F&B' }],
-  },
-  {
-    name: 'Leah Fontaine', role: 'Spa Attendant · XT', dept: 'Spa', blocks: [{ start: 2, span: 3, dept: 'Spa' }],
-    after: [{ start: 2, span: 1, dept: 'Spa' }, { start: 3, span: 4, dept: 'F&B', kind: 'reassigned', label: 'XT → F&B' }],
-  },
-];
-
-export function ScheduleGrid({ after, className }: { after: boolean; className?: string }) {
+export function ScheduleGrid({ staff, after, className }: { staff: Emp[], after: boolean; className?: string }) {
   const groups: { dept: Dept; emps: Emp[] }[] = (['Housekeeping', 'Front Desk', 'F&B', 'Spa'] as Dept[]).map(d => ({
-    dept: d, emps: STAFF.filter(e => e.dept === d),
+    dept: d, emps: staff.filter(e => e.dept === d),
   }));
 
   return (
@@ -65,7 +42,7 @@ export function ScheduleGrid({ after, className }: { after: boolean; className?:
             <div className="border-l border-edge" />
           </div>
           {g.emps.map(e => {
-            const blocks = after && e.after ? e.after : e.blocks;
+            const blocks = after && e.afterBlocks && e.afterBlocks.length > 0 ? e.afterBlocks : e.blocks;
             return (
               <div key={e.name} className="grid border-b border-edge/60 hover:bg-card/40 transition-colors" style={{ gridTemplateColumns: '170px 1fr' }}>
                 <div className="px-3 py-1.5 leading-tight">

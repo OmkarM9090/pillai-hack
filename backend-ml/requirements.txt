@@ -3,8 +3,8 @@ uvicorn
 scikit-learn
 pandas
 numpy
-google-generativeai
 pydantic
 python-dotenv
-xgboost 
+xgboost
 ortools
+requests

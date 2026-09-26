@@ -22,3 +22,8 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets
+.env
+backend-ml/.env
+backend-node/.env

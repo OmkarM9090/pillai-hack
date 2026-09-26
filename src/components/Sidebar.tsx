@@ -1,16 +1,17 @@
 import {
   CalendarRange, ClipboardCheck, FlaskConical, Gauge, HelpCircle, History,
-  LayoutDashboard, MessageSquareText, Settings, SquareKanban, TrendingUp, Menu, ChevronLeft, ChevronRight, X
+  LayoutDashboard, MessageSquareText, Settings, SquareKanban, TrendingUp, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import { useApp } from '@/store/app';
+import { useApp, ROLES } from '@/store/app';
 import type { ScreenId } from '@/data/model';
 import { Avatar } from './ui';
 
 type Item = { id: ScreenId; label: string; icon: React.ElementType; badge?: number };
 
 export function Sidebar() {
-  const { screen, navigate, pendingCount, openTaskIds, pushToast, sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen } = useApp();
+  const { screen, navigate, pendingCount, openTaskIds, pushToast, sidebarCollapsed, setSidebarCollapsed, mobileMenuOpen, setMobileMenuOpen, activeRole, activeUserName } = useApp();
+  const currentRole = ROLES.find(r => r.id === activeRole);
 
   const groups: { label: string; items: Item[] }[] = [
     { label: 'Command Center', items: [{ id: 'overview', label: 'Overview', icon: LayoutDashboard }] },
@@ -35,6 +36,24 @@ export function Sidebar() {
       ],
     },
   ];
+
+  const getFilteredGroups = () => {
+    if (activeRole === 'gm' || activeRole === 'ops') return groups;
+    if (activeRole === 'guest') return [];
+    if (activeRole === 'staff') {
+      return [{
+        label: 'Operations',
+        items: groups.find(g => g.label === 'Operations')?.items.filter(i => i.id === 'tasks') || []
+      }];
+    }
+    // Middle management (hk, fb, eng)
+    return [
+      { label: 'Command Center', items: groups.find(g => g.label === 'Command Center')?.items || [] },
+      { label: 'Operations', items: groups.find(g => g.label === 'Operations')?.items || [] }
+    ];
+  };
+
+  const filteredGroups = getFilteredGroups().filter(g => g.items.length > 0);
 
   return (
     <aside className={cn(
@@ -65,7 +84,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2.5 space-y-5 overflow-x-hidden">
-        {groups.map(g => (
+        {filteredGroups.map(g => (
           <div key={g.label}>
             {!sidebarCollapsed && (
               <p className="px-2.5 mb-1.5 text-[9.5px] font-bold tracking-[0.18em] text-slate-400 uppercase md:block hidden">{g.label}</p>
@@ -150,10 +169,10 @@ export function Sidebar() {
       {/* User card */}
       <div className={cn("m-2.5 mt-1 p-3 rounded-xl bg-slate-50 border border-slate-200 transition-all overflow-hidden", sidebarCollapsed ? "md:p-2 md:flex md:justify-center" : "")}>
         <div className={cn("flex items-center gap-2.5", sidebarCollapsed ? "md:justify-center" : "")}>
-          <Avatar name="Sarah Morgan" />
+          <Avatar name={activeUserName} />
           <div className={cn("min-w-0 leading-tight", sidebarCollapsed ? "md:hidden" : "")}>
-            <p className="text-[12.5px] font-semibold text-slate-900 truncate">Sarah Morgan</p>
-            <p className="text-[10.5px] text-slate-500 truncate">General Manager</p>
+            <p className="text-[12.5px] font-semibold text-slate-900 truncate">{activeUserName}</p>
+            <p className="text-[10.5px] text-slate-500 truncate">{currentRole?.name}</p>
           </div>
         </div>
         <div className={cn("mt-2.5 pt-2.5 border-t border-slate-200 flex items-center justify-between", sidebarCollapsed ? "md:hidden" : "")}>

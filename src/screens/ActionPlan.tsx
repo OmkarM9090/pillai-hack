@@ -189,7 +189,7 @@ function ActionCard({ action, index }: { action: ActionItem; index: number }) {
 }
 
 export function ActionPlan() {
-  const { actions, navigate } = useApp();
+  const { actions, navigate, staff } = useApp();
   const [view, setView] = useState<'before' | 'after'>('before');
   const staffAction = actions.find(a => a.id === 'ACT-2048');
   const optimized = staffAction ? ['approved', 'queued'].includes(staffAction.status) : false;
@@ -248,7 +248,7 @@ export function ActionPlan() {
             </div>
           </div>
 
-          <ScheduleGrid after={after} />
+          <ScheduleGrid staff={staff} after={after} />
           <ScheduleLegend />
 
           {after && !optimized && (

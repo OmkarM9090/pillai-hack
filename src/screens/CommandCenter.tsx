@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  ArrowDownRight, ArrowRight, ArrowUpRight, BedDouble, CalendarCheck2, CheckCircle2, ChevronRight, ClipboardCheck, CloudLightning,
+  ArrowDownRight, ArrowRight, ArrowUpRight, BedDouble, CalendarCheck2, CheckCircle2, ChevronRight, ClipboardCheck, Sun, CloudRain,
   ConciergeBell, Flame, FlaskConical, LogIn, LogOut, Minus, PackageOpen, Sparkles, Timer, TrendingUp,
   UtensilsCrossed, Wrench, X,
 } from 'lucide-react';
@@ -36,12 +37,38 @@ export function Highlighted({ text, marks, markClass }: { text: string; marks: s
 }
 
 export function CommandCenter() {
-  const { navigate, approveAll, alertState, setAlertState, addTask, hasTask, pushToast, pendingCount, actions } = useApp();
+  const { navigate, approveAll, alertState, setAlertState, fetchTasks, hasTask, pushToast, pendingCount, actions, result, activeRole } = useApp();
+  const [weatherStr, setWeatherStr] = useState('Loading weather...');
 
-  const createEngTask = () => {
+  useEffect(() => {
+    // Fetch live weather from Open-Meteo for Miami (Azure Bay Resort analog)
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=25.76&longitude=-80.19&current_weather=true')
+      .then(res => res.json())
+      .then(data => {
+        const temp = data.current_weather.temperature;
+        const code = data.current_weather.weathercode;
+        // WMO Weather codes: 0 is clear, 1-3 cloudy, 51+ rain/storm
+        if (code === 0) setWeatherStr(`Clear ${temp}°C`);
+        else if (code <= 3) setWeatherStr(`Cloudy ${temp}°C`);
+        else setWeatherStr(`Rain ${temp}°C`);
+      })
+      .catch(() => setWeatherStr('Weather Unavailable'));
+  }, []);
+
+  const createEngTask = async () => {
     if (hasTask('OPS-104')) { navigate('tasks'); return; }
-    addTask({ ...AC_TASK });
-    pushToast('success', 'Task OPS-104 created', 'Routed to Engineering · auto-assigned to Alex Carter.');
+    try {
+      await fetch('http://localhost:5000/api/tasks/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': activeRole },
+        body: JSON.stringify(AC_TASK)
+      });
+      await fetchTasks();
+      pushToast('success', 'Task OPS-104 created', 'Routed to Engineering · auto-assigned to Alex Carter.');
+    } catch (e) {
+      console.error(e);
+      pushToast('error', 'API Error', 'Failed to dispatch ticket via API.');
+    }
   };
 
   const approved = alertState === 'approved';
@@ -56,37 +83,40 @@ export function CommandCenter() {
           <>
             <Tag><LogIn className="size-3 mr-1.5 text-emerald-500" />Arrivals <b className="text-slate-900 ml-1 tnum">74</b></Tag>
             <Tag><LogOut className="size-3 mr-1.5 text-sky-500" />Departures <b className="text-slate-900 ml-1 tnum">58</b></Tag>
-            <Tag><CloudLightning className="size-3 mr-1.5 text-amber-500" />Storm 17:00–21:00</Tag>
+            <Tag>
+              {weatherStr.includes('Rain') ? <CloudRain className="size-3 mr-1.5 text-sky-500" /> : <Sun className="size-3 mr-1.5 text-amber-500" />}
+              {weatherStr}
+            </Tag>
           </>
         }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Kpi
-          label="Room Occupancy" sev="warn" icon={<BedDouble className="size-4" />}
+          label="Room Occupancy" sev={result.risk === 'HIGH' ? 'warn' : 'ok'} icon={<BedDouble className="size-4" />}
           onClick={() => navigate('sandbox')}
           value={<>
-            <AnimatedNumber value={95} format={v => `${Math.round(v)}%`} className="text-[26px] font-bold text-slate-900" />
-            <Badge sev="warn" pulse className="ml-1">Surge alert</Badge>
+            <AnimatedNumber value={result.occupancy * 100} format={v => `${Math.round(v)}%`} className="text-[26px] font-bold text-slate-900" />
+            {result.risk === 'HIGH' && <Badge sev="warn" pulse className="ml-1">Surge alert</Badge>}
           </>}
-          sub="Tonight · 190/200 rooms" delta={<Delta value="+25%" invert />}
-          spark={<Spark data={[62, 65, 68, 70, 71, 74, 88, 95]} color="#F59E0B" w={220} h={24} className="w-full" />}
+          sub={`Tonight · ${result.occupiedRooms}/200 rooms`} delta={<Delta value="+25%" invert={result.risk === 'HIGH'} />}
+          spark={<Spark data={[62, 65, 68, 70, 71, 74, 88, result.occupancy * 100]} color={result.risk === 'HIGH' ? "#F59E0B" : "#10B981"} w={220} h={24} className="w-full" />}
         />
         <Kpi
           label="Projected GOPPAR" sev="ok" icon={<TrendingUp className="size-4" />}
-          value={<AnimatedNumber value={42850} format={v => '$' + Math.round(v).toLocaleString()} className="text-[26px] font-bold text-slate-900" />}
+          value={<AnimatedNumber value={result.goppar} format={v => '$' + Math.round(v).toLocaleString()} className="text-[26px] font-bold text-slate-900" />}
           sub="vs $38,250 static plan" delta={<Delta value="+12%" />}
-          spark={<Spark data={[37.8, 38.1, 38.25, 38.6, 39.2, 40.4, 41.8, 42.85]} w={220} h={24} className="w-full" />}
+          spark={<Spark data={[37.8, 38.1, 38.25, 38.6, 39.2, 40.4, 41.8, result.goppar/1000]} w={220} h={24} className="w-full" />}
         />
         <Kpi
-          label="Staff Burnout Risk" sev="crit" icon={<Flame className="size-4" />}
+          label="Staff Burnout Risk" sev={result.burnout > 75 ? 'crit' : 'ok'} icon={<Flame className="size-4" />}
           onClick={() => navigate('scheduler')}
           value={<>
-            <AnimatedNumber value={84} format={v => `${Math.round(v)}%`} className="text-[26px] font-bold text-rose-600" />
-            <Badge sev="crit" pulse>Critical</Badge>
+            <AnimatedNumber value={result.burnout} format={v => `${Math.round(v)}%`} className={cn("text-[26px] font-bold", result.burnout > 75 ? "text-rose-600" : "text-emerald-600")} />
+            {result.burnout > 75 && <Badge sev="crit" pulse>Critical</Badge>}
           </>}
-          sub="Capacity limit exceeded" delta={<Delta value="+44 pts" invert />}
-          spark={<Spark data={HEALTH_SPARKS.hk} color="#F43F5E" w={220} h={24} className="w-full" />}
+          sub={result.burnout > 75 ? "Capacity limit exceeded" : "Within safe limits"} delta={<Delta value="+44 pts" invert />}
+          spark={<Spark data={HEALTH_SPARKS.hk} color={result.burnout > 75 ? "#F43F5E" : "#10B981"} w={220} h={24} className="w-full" />}
         />
         <Kpi
           label="Service Quality" sev="ok" icon={<Sparkles className="size-4" />}

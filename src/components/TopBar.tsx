@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Bell, ChevronDown, MapPin, Search, Sparkles, Menu } from 'lucide-react';
-import { useApp } from '@/store/app';
+import { useEffect, useState, useRef } from 'react';
+import { Bell, ChevronDown, MapPin, Search, Sparkles, Menu, Check } from 'lucide-react';
+import { useApp, ROLES } from '@/store/app';
 import { DATE_STR } from '@/data/model';
 import { Avatar, Btn } from './ui';
 
@@ -14,7 +14,21 @@ function useClock() {
 }
 
 export function TopBar() {
-  const { setAssistantOpen, assistantOpen, pendingCount, navigate, setMobileMenuOpen } = useApp();
+  const { setAssistantOpen, assistantOpen, pendingCount, navigate, setMobileMenuOpen, activeRole, setActiveRole, activeUserName } = useApp();
+  const currentRole = ROLES.find(r => r.id === activeRole);
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const roleMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (roleMenuRef.current && !roleMenuRef.current.contains(event.target as Node)) {
+        setRoleMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const t = useClock();
   let h = t.getHours(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
   const clock = `${String(h).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')} ${ap}`;
@@ -61,12 +75,39 @@ export function TopBar() {
         )}
       </button>
 
-      <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-        <Avatar name="Sarah Morgan" />
-        <div className="hidden lg:block leading-tight">
-          <p className="text-[12.5px] font-semibold text-slate-900">Sarah Morgan</p>
-          <p className="text-[10.5px] text-slate-500">General Manager</p>
-        </div>
+      <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200 relative" ref={roleMenuRef}>
+        <button 
+          onClick={() => setRoleMenuOpen(!roleMenuOpen)}
+          className="flex items-center gap-2.5 hover:bg-slate-50 p-1.5 rounded-lg transition-colors text-left"
+        >
+          <Avatar name={activeUserName} />
+          <div className="hidden lg:block leading-tight pr-1">
+            <p className="text-[12.5px] font-semibold text-slate-900">{activeUserName}</p>
+            <p className="text-[10.5px] text-slate-500">{currentRole?.name}</p>
+          </div>
+          <ChevronDown className="hidden lg:block size-3.5 text-slate-400" />
+        </button>
+
+        {roleMenuOpen && (
+          <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50">
+            <div className="px-3 py-2 border-b border-slate-100 mb-1.5">
+              <p className="text-[10px] font-bold tracking-[0.1em] text-slate-400 uppercase">Switch Role (Demo)</p>
+            </div>
+            {ROLES.map(r => (
+              <button
+                key={r.id}
+                onClick={() => { setActiveRole(r.id); setRoleMenuOpen(false); navigate(r.id === 'guest' ? 'overview' : (r.id === 'staff' ? 'tasks' : 'overview')); }}
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-slate-50 transition-colors text-left"
+              >
+                <div>
+                  <p className={`text-[12.5px] font-semibold ${r.id === activeRole ? 'text-emerald-700' : 'text-slate-700'}`}>{r.name}</p>
+                  <p className="text-[10.5px] text-slate-500">{r.user}</p>
+                </div>
+                {r.id === activeRole && <Check className="size-4 text-emerald-600" />}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </header>
   );

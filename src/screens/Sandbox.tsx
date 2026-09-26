@@ -218,7 +218,7 @@ export function Sandbox() {
             <div className="relative" key={`flow-${rippleKey}`}>
               <div className="absolute left-[15px] top-2 bottom-2 w-px bg-slate-200" />
               <svg className="absolute left-[15px] top-2 bottom-2 w-px h-[calc(100%-16px)]" preserveAspectRatio="none">
-                <line x1="0.5" y1="0" x2="0.5" y2="100%" stroke="#0EA5E9" strokeWidth="1" strokeDasharray="4 10" className="animate-flow" opacity={0.5} vector-effect="non-scaling-stroke" />
+                <line x1="0.5" y1="0" x2="0.5" y2="100%" stroke="#0EA5E9" strokeWidth="1" strokeDasharray="4 10" className="animate-flow" opacity={0.5} vectorEffect="non-scaling-stroke" />
               </svg>
               <div className="space-y-1">
                 {ripple.map((n, i) => {

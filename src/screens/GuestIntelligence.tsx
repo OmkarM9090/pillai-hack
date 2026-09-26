@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useApp } from '@/store/app';
-import { AC_TASK, REVIEWS, type Review, type Task } from '@/data/model';
+import { AC_TASK, type Review, type Task } from '@/data/model';
 import { Badge, Btn, Progress, ScreenHeader, SectionHead, Tag } from '@/components/ui';
 import { Highlighted } from './CommandCenter';
 
@@ -72,23 +72,37 @@ function RoomModal({ room, onClose }: { room: string; onClose: () => void }) {
 }
 
 export function GuestIntelligence() {
-  const { addTask, hasTask, pushToast, navigate, resolvedReviews, resolveReview } = useApp();
+  const { fetchTasks, hasTask, pushToast, navigate, resolvedReviews, resolveReview, reviews } = useApp();
   const [filter, setFilter] = useState('All');
   const [selId, setSelId] = useState('RV-1042');
   const [roomView, setRoomView] = useState(false);
 
-  const list = useMemo(() => REVIEWS.filter(r =>
-    filter === 'All' ? true : ['Negative', 'Positive', 'Mixed'].includes(filter) ? r.sentiment === filter : r.aspect === filter), [filter]);
-  const sel: Review = REVIEWS.find(r => r.id === selId) ?? REVIEWS[0];
-  const selTask = TASK_BY_REVIEW[sel.id];
+  const list = useMemo(() => reviews.filter(r =>
+    filter === 'All' ? true : ['Negative', 'Positive', 'Mixed'].includes(filter) ? r.sentiment === filter : r.aspect === filter), [filter, reviews]);
+  const sel: Review = reviews.find(r => r.id === selId) ?? reviews[0];
+  const selTask = sel ? TASK_BY_REVIEW[sel.id] : null;
   const taskExists = selTask ? hasTask(selTask.id) : false;
-  const negCount = REVIEWS.filter(r => r.sentiment === 'Negative' && !resolvedReviews.has(r.id)).length;
+  const negCount = reviews.filter(r => r.sentiment === 'Negative' && !resolvedReviews.has(r.id)).length;
 
-  const createTask = () => {
-    if (!selTask) return;
+  const createTask = async () => {
     if (taskExists) { navigate('tasks'); return; }
-    addTask(selTask);
-    pushToast('success', `${selTask.id} created`, `Routed to ${selTask.dept} · auto-assigned to ${selTask.assignee}.`);
+    try {
+      const response = await fetch('http://localhost:5000/api/parse-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': 'gm' },
+        body: JSON.stringify({ review_text: sel.text })
+      });
+      const data = await response.json();
+      if (data.ticket_routed && data.created_task) {
+        await fetchTasks();
+        pushToast('success', `${data.created_task.id} created`, `Routed to ${data.created_task.dept}.`);
+      } else {
+        pushToast('info', 'No Task Routed', 'ML parsed review but no ticket was generated.');
+      }
+    } catch (err) {
+      console.error(err);
+      pushToast('error', 'API Error', 'Failed to call parse-review API.');
+    }
   };
 
   return (
@@ -98,7 +112,7 @@ export function GuestIntelligence() {
         sub="Turn guest feedback into operational action."
         right={
           <>
-            <Tag><MessageSquareQuote className="size-3 mr-1.5 text-sky-500" /><b className="text-slate-900 tnum">{REVIEWS.length}</b>&nbsp;reviews (24 h)</Tag>
+            <Tag><MessageSquareQuote className="size-3 mr-1.5 text-sky-500" /><b className="text-slate-900 tnum">{reviews.length}</b>&nbsp;reviews (24 h)</Tag>
             <Tag><TriangleAlert className="size-3 mr-1.5 text-rose-500" /><b className="text-slate-900 tnum">{negCount}</b>&nbsp;needs action</Tag>
           </>
         }
@@ -111,7 +125,7 @@ export function GuestIntelligence() {
             className={cn('h-7 px-3 rounded-full border text-[11.5px] font-semibold transition-all',
               filter === f ? 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm' : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 bg-white')}>
             {f}
-            {f === 'Negative' && <span className="ml-1.5 tnum text-[10px] opacity-80">{REVIEWS.filter(r => r.sentiment === 'Negative').length}</span>}
+            {f === 'Negative' && <span className="ml-1.5 tnum text-[10px] opacity-80">{reviews.filter(r => r.sentiment === 'Negative').length}</span>}
           </button>
         ))}
       </div>
