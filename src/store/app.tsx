@@ -72,6 +72,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [screen, setScreen] = useState<ScreenId>('overview');
   const [draft, setDraftState] = useState<ScenarioParams>(BASE_PARAMS);
   const [applied, setApplied] = useState<ScenarioParams>(BASE_PARAMS);
+  const [result, setResult] = useState<SimResult>(BASE_RESULT);
+  const [baseResult] = useState<SimResult>(BASE_RESULT);
   const [phase, setPhase] = useState<SimPhase>('idle');
   const [lastRun, setLastRun] = useState<string | null>(null);
   const [actions, setActions] = useState<ActionItem[]>(INITIAL_ACTIONS);
@@ -112,20 +114,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const latestDraft = useRef(draft);
   latestDraft.current = draft;
 
-  const runSimulation = useCallback(() => {
+  const runSimulation = useCallback(async () => {
     setPhase('running');
-    later(1500, () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          occupancy: latestDraft.current.occupancy,
+          weather: latestDraft.current.weather,
+          inflation: latestDraft.current.inflation
+        })
+      });
+      const data = await response.json();
+      
+      setResult(prev => ({
+        ...prev,
+        occupancy: latestDraft.current.occupancy,
+        occupiedRooms: Math.round(200 * latestDraft.current.occupancy),
+        goppar: data.goppar,
+        hkDelayMin: data.housekeepingDelay * 60, // API sends hours, map to mins
+        diningWaitMin: data.fbWaitTimes,
+        burnout: data.burnoutRisk,
+        risk: data.status === 'CRITICAL' ? 'HIGH' : (data.status === 'LOW_DEMAND' ? 'LOW' : 'MODERATE')
+      }));
+      
       setApplied({ ...latestDraft.current });
       setPhase('updated');
       setLastRun(stamp(new Date(BOOT.getTime() + 5 * 60000)));
-      pushToast('success', 'Scenario updated', 'Operational impact recalculated against current conditions.');
+      pushToast('success', 'Scenario updated via AI Core', 'Operational impact dynamically calculated by ML Engine.');
       later(2600, () => setPhase(p => (p === 'updated' ? 'idle' : p)));
-    });
+    } catch (e) {
+      console.error(e);
+      pushToast('error', 'API Error', 'Could not reach Python ML backend. Is it running?');
+      setPhase('idle');
+    }
   }, [later, pushToast]);
 
   const resetBaseline = useCallback(() => {
     setDraftState(BASE_PARAMS);
     setApplied(BASE_PARAMS);
+    setResult(BASE_RESULT);
     setPhase('idle');
     pushToast('info', 'Reset to baseline', '70% occupancy · Sunny · 0% inflation.');
   }, [pushToast]);
@@ -213,8 +242,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setResolvedReviews(prev => new Set(prev).add(id));
   }, []);
 
-  const result = useMemo(() => computeScenario(applied), [applied]);
-  const baseResult = useMemo(() => computeScenario(BASE_PARAMS), []);
   const dirty = useMemo(
     () => draft.occupancy !== applied.occupancy || draft.weather !== applied.weather || draft.inflation !== applied.inflation,
     [draft, applied],
